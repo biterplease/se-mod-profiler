@@ -1,0 +1,13 @@
+<Project>
+  <!-- user.props (git-ignored) can override Bin64 when SE is installed in a non-default location -->
+  <Import Project="$(MSBuildThisFileDirectory)user.props" Condition="Exists('$(MSBuildThisFileDirectory)user.props')" />
+
+  <PropertyGroup>
+    <!-- Folder containing SpaceEngineers.exe — user.props takes priority; registry is the fallback -->
+    <Bin64 Condition="'$(Bin64)' == ''">$(registry:HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\Steam App 244850@InstallLocation)\Bin64</Bin64>
+
+    <Version>1.0.0</Version>
+    <AssemblyVersion>1.0.0.0</AssemblyVersion>
+    <FileVersion>1.0.0.0</FileVersion>
+  </PropertyGroup>
+</Project>

@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net48</TargetFramework>
+    <LangVersion>6</LangVersion>
+    <IsTestProject>true</IsTestProject>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\SEProfiler.Lib\SEProfiler.Lib.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="MSTest.TestFramework" Version="3.3.0" />
+    <PackageReference Include="MSTest.TestAdapter"   Version="3.3.0" />
+    <PackageReference Include="Moq"                  Version="4.20.72" />
+  </ItemGroup>
+
+  <!-- Link Lib test files from SEProfiler.Tests without duplicating them -->
+  <ItemGroup>
+    <Compile Include="..\SEProfiler.Tests\Lib\ProfilerTests.cs"     Link="Lib\ProfilerTests.cs" />
+    <Compile Include="..\SEProfiler.Tests\Lib\ProfileScopeTests.cs" Link="Lib\ProfileScopeTests.cs" />
+  </ItemGroup>
+</Project>

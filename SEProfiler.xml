@@ -1,0 +1,32 @@
+<?xml version="1.0"?>
+<PluginData xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="GitHubPlugin">
+
+    <Id>54121f4f-d91e-4e15-a4f7-828738c67342</Id>
+    <RepoId>biterplease/se-mod-profiler</RepoId>
+    <FriendlyName>SE Mod Profiler</FriendlyName>
+    <Author>biterplease</Author>
+    <Tooltip>Low-footprint profiler for Space Engineers mods</Tooltip>
+    <Description>Observes a target mod at SE framework boundaries using Harmony patches and CLR ETW
+        events.
+        Outputs a JSONL event stream by default, with optional Prometheus-format aggregate export.
+        Mods may optionally reference SEProfiler.Lib for internal instrumentation.
+
+        Drop a cmd.json in %AppData%\SpaceEngineers\SEModProfiler\ to scope a mod at runtime without
+        restarting the game, or use the in-game UI to configure which mods to listen to.
+        Instrumentation is straightforward
+    </Description>
+
+    <SourceDirectories>
+        <Directory>SEProfiler.Plugin</Directory>
+    </SourceDirectories>
+
+    <NuGetReferences>
+        <PackageReference Include="Lib.Harmony" Version="2.4.2" />
+        <PackageReference Include="Mono.Cecil" Version="0.11.6" />
+        <PackageReference Include="SEProfiler.Lib" Version="0.0.0" />
+    </NuGetReferences>
+
+    <Commit>abcd1234</Commit>
+
+</PluginData>
