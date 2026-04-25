@@ -91,18 +91,25 @@ Example lines:
 ```csharp
 using SEProfiler;
 using Sandbox.ModAPI;
+using VRage.Utils;
 using VRage.Game.Components;
 
 // Minimal SessionComponent-style example.
 [MySessionComponentDescriptor(MyUpdateOrder.BeforeSimulation)]
 public sealed class ProfilerExampleSession : MySessionComponentBase
 {
+    public int MyModValue = 0;
     public override void Init(MyObjectBuilder_SessionComponent sessionComponent)
     {
         // Optional but recommended: shows your mod in the profiler UI.
         Profiler.Register("Profiler Example Mod", ModContext.ModId);
     }
 
+    [SEProfiler.Counter("ProfilerExample.Ticks")] // increment by 1
+    [SEProfiler.Counter("ProfilerExample.Ticks", 10)] // increment by 10
+    [SEProfiler.Scope("ProfilerExample.UpdateTick")] // scope output of entire function
+    [SEProfiler.Gauge("profiler_example.fixed_budget_ms", 16.67)] // compile-time constant only
+    [SEProfiler.Event("profiler_example.phase", "before_sim")] // compile-time constant only
     public override void UpdateBeforeSimulation()
     {
         RecordScopeExample();
@@ -121,20 +128,29 @@ public sealed class ProfilerExampleSession : MySessionComponentBase
 
     private void RecordCounterExample()
     {
-        Profiler.Counter("profiler_example.ticks", 1);
+        Profiler.Counter("profiler_example.MyModValue_tick", MyModValue);
+        MyModValue++;
     }
 
     private void RecordGaugeExample()
     {
+        // Runtime values (VRage/SE API state) cannot be used in attributes.
         Profiler.Gauge("profiler_example.players_online", MyAPIGateway.Multiplayer.PlayerCount);
     }
 
     private void RecordEventExample()
     {
-        Profiler.Event("profiler_example.phase", "before_sim");
+        // Runtime payload from VRage should be sent explicitly.
+        Profiler.Event("profiler_example.phase", MyGameTimer.SessionTimeSpan.TotalSeconds.ToString("F2"));
     }
 }
 ```
+
+Attribute arguments are limited to compile-time constants. In practice:
+
+- Works in attributes: string literals, numeric literals, `const` values, `nameof(...)`, `typeof(...)`.
+- Does not work in attributes: runtime values like `MyAPIGateway.Multiplayer.PlayerCount`, `DateTime.UtcNow`, non-const fields/properties, method calls.
+- For runtime values from VRage/SE APIs, keep explicit `Profiler.*` calls inside the method body.
 
 All four methods are **unconditional no-ops** when the plugin is absent. The only overhead is a single null check on `Profiler.Sink`. No allocation occurs on the no-op path.
 
