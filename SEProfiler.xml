@@ -24,9 +24,9 @@
     <NuGetReferences>
         <PackageReference Include="Lib.Harmony" Version="2.4.2" />
         <PackageReference Include="Mono.Cecil" Version="0.11.6" />
-        <PackageReference Include="SEProfiler.Lib" Version="0.0.0" />
+        <PackageReference Include="SEProfiler.Lib" Version="0.2.2" />
     </NuGetReferences>
 
-    <Commit>abcd1234</Commit>
+    <Commit>0001ef2f846d18282e8463cca556de255f3746d4</Commit>
 
 </PluginData>
