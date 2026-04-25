@@ -14,7 +14,7 @@ on:
         default: 'no'
 
 jobs:
-  # --- CI STAGE (Runs on PRs and Tags) ---
+  # --- CI STAGE ---
   build:
     if: github.event_name == 'pull_request' || github.ref_type == 'tag'
     runs-on: windows-latest
@@ -41,7 +41,7 @@ jobs:
       - name: Run Lib Tests
         run: dotnet test SEProfiler.Lib.Tests/SEProfiler.Lib.Tests.csproj -c Release --logger "trx;LogFileName=results.trx"
 
-  # --- CD STAGE (Runs on Main after Merge) ---
+  # --- CD STAGE ---
   tagging:
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: ubuntu-latest
@@ -55,15 +55,12 @@ jobs:
         uses: mathieudutour/github-tag-action@v6.2
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          # Reads conventional commit messages (fix:, feat:, etc.) to bump semver
 
   package_and_upload:
     if: github.event_name == 'workflow_dispatch' && github.event.inputs.confirm_upload == 'yes'
     runs-on: windows-latest
     permissions:
       contents: write
-    env:
-      NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -97,17 +94,12 @@ jobs:
         run: |
           $pkg = Get-ChildItem nupkg -Filter *.nupkg | Select-Object -First 1
           Write-Host "=== Package: $($pkg.Name) ==="
-
           $out = "nupkg\extracted"
           Expand-Archive -Path $pkg.FullName -DestinationPath $out -Force
-
           Write-Host "`n=== .nuspec ==="
           Get-Content (Get-ChildItem $out -Filter *.nuspec | Select-Object -First 1).FullName
-
           Write-Host "`n=== Files in package ==="
-          Get-ChildItem $out -Recurse -File |
-              ForEach-Object { $_.FullName.Substring((Resolve-Path $out).Path.Length + 1) }
-
+          Get-ChildItem $out -Recurse -File | ForEach-Object { $_.FullName.Substring((Resolve-Path $out).Path.Length + 1) }
           Write-Host "`n=== SEProfiler.Lib.dll referenced assemblies ==="
           $dll = Get-ChildItem $out -Recurse -Filter SEProfiler.Lib.dll | Select-Object -First 1
           if ($dll) {
@@ -119,7 +111,7 @@ jobs:
 
       - name: Upload to NuGet
         shell: bash
-        run: dotnet nuget push nupkg/*.nupkg --api-key "$NUGET_API_KEY" --source https://api.nuget.org/v3/index.json --skip-duplicate
+        run: dotnet nuget push nupkg/*.nupkg --api-key "${{ secrets.NUGET_API_KEY }}" --source https://api.nuget.org/v3/index.json --skip-duplicate
 
       - name: Update SEProfiler.xml Lib version and Commit
         shell: pwsh
@@ -132,5 +124,5 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add SEProfiler.xml
-          git diff --staged --quiet || git commit -m "chore: update SEProfiler.xml (version ${{ steps.version.outputs.TAG }} / sha $sha) [skip ci]
+          git diff --staged --quiet || git commit -m "chore: update SEProfiler.xml (version ${{ steps.version.outputs.TAG }} / sha ${{ github.sha }}) [skip ci]"
           git push origin HEAD:main

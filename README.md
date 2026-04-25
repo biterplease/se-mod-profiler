@@ -18,6 +18,12 @@ A two-component profiling system for Space Engineers mods.
 
 ## Installation
 
+### Pulsar UI
+
+You should be able to find the plugin in the in-game pulsar UI.
+
+### Local
+
 1. Build the solution in **Release** configuration.
 2. Copy `SEModProfiler.dll` to Pulsar's plugin directory:
    ```
@@ -84,22 +90,50 @@ Example lines:
 
 ```csharp
 using SEProfiler;
+using Sandbox.ModAPI;
+using VRage.Game.Components;
 
-// Time a block of code
-using (Profiler.Scope("BuildQueue.Process"))
+// Minimal SessionComponent-style example.
+[MySessionComponentDescriptor(MyUpdateOrder.BeforeSimulation)]
+public sealed class ProfilerExampleSession : MySessionComponentBase
 {
-    // ... expensive work ...
+    public override void Init(MyObjectBuilder_SessionComponent sessionComponent)
+    {
+        // Optional but recommended: shows your mod in the profiler UI.
+        Profiler.Register("Profiler Example Mod", ModContext.ModId);
+    }
+
+    public override void UpdateBeforeSimulation()
+    {
+        RecordScopeExample();
+        RecordCounterExample();
+        RecordGaugeExample();
+        RecordEventExample();
+    }
+
+    private void RecordScopeExample()
+    {
+        using (Profiler.Scope("ProfilerExample.UpdateTick"))
+        {
+            // Work you want to time.
+        }
+    }
+
+    private void RecordCounterExample()
+    {
+        Profiler.Counter("profiler_example.ticks", 1);
+    }
+
+    private void RecordGaugeExample()
+    {
+        Profiler.Gauge("profiler_example.players_online", MyAPIGateway.Multiplayer.PlayerCount);
+    }
+
+    private void RecordEventExample()
+    {
+        Profiler.Event("profiler_example.phase", "before_sim");
+    }
 }
-
-// Increment a counter
-Profiler.Counter("jobs_submitted");
-Profiler.Counter("bytes_transferred", payload.Length);
-
-// Set a gauge
-Profiler.Gauge("queue_depth", _queue.Count);
-
-// Fire a named event
-Profiler.Event("phase_change", "idle→active");
 ```
 
 All four methods are **unconditional no-ops** when the plugin is absent. The only overhead is a single null check on `Profiler.Sink`. No allocation occurs on the no-op path.
@@ -190,3 +224,9 @@ dotnet test SEProfiler.Tests --filter "TestCategory=Integration"
 - Harmony patches are applied once at `Init` and are never removed. When unscoped, patches are silent (`Sink == null` gates all recording). Calling `UnpatchAll` in `Dispose` is explicitly avoided to avoid breaking other loaded plugins.
 - The profiler is passive — it does not modify any game logic, only wraps framework boundary methods.
 - `SEProfiler.Lib.dll` carries no SE or Harmony dependencies and is safe to redistribute with a mod.
+
+
+## Contributing
+
+- Submit an Issue/PR
+- AI assisted/generated code is allowed, but try to keep the comments concise.
