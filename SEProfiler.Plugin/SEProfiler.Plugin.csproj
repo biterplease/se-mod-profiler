@@ -58,6 +58,14 @@
       <HintPath>$(Bin64)\VRage.Library.dll</HintPath>
       <Private>False</Private>
     </Reference>
+    <Reference Include="VRage.Math">
+      <HintPath>$(Bin64)\VRage.Math.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Sandbox.Graphics">
+      <HintPath>$(Bin64)\Sandbox.Graphics.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
   </ItemGroup>
 
   <ItemGroup>
