@@ -226,6 +226,39 @@ Run unit tests (no SE installation required at test runtime):
 dotnet test SEProfiler.Tests --filter "TestCategory!=Integration"
 ```
 
+### Strip instrumentation utility
+
+The repository includes a small CLI project, `SEProfiler.InstrumentationStripper.Cli`, that removes profiler instrumentation from C# source files.
+
+Default mode is preview-only (prints transformed source to stdout and does not modify files):
+
+```
+dotnet run --project SEProfiler.InstrumentationStripper.Cli -- strip-instrumentation path/to/mod
+```
+
+Overwrite files in place:
+
+```
+dotnet run --project SEProfiler.InstrumentationStripper.Cli -- --inplace path/to/mod
+```
+
+The tool strips:
+
+- `[SEProfiler.Scope|Counter|Gauge|Event(...)]` (and unqualified forms)
+- `Profiler.Counter(...)`, `Profiler.Gauge(...)`, `Profiler.Event(...)` statements
+- `using (Profiler.Scope(...)) { ... }` wrappers (keeps inner body)
+- `using var _ = Profiler.Scope(...);` statements
+
+Yes, you can include the stripper in a .NET build/publish pipeline. For example, in a mod `.csproj` you can invoke it before your release publish target:
+
+```xml
+<Target Name="StripProfilerInstrumentationForRelease" BeforeTargets="Publish" Condition="'$(Configuration)' == 'Release'">
+  <Exec Command="dotnet run --project ..\SEProfiler.InstrumentationStripper.Cli -- --inplace $(MSBuildProjectDirectory)\Data\Scripts" />
+</Target>
+```
+
+In CI you can run the same command as a step before packaging artifacts.
+
 Run the manual integration test suite after a live SE session:
 
 ```
