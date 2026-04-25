@@ -85,6 +85,20 @@ Example lines:
 {"t":1714000000124,"src":"etw","type":"event","name":"GCStart","data":"gen=0"}
 {"t":1714000000125,"src":"mod","type":"counter","name":"tasks_dispatched","delta":1}
 ```
+## Usage
+
+### Declare your mod as instrumented
+
+Any mod calling `Profiler.Register` will show up in the plugin's config dialog. It's recommended to call `Profiler.Register` on your mod's init.
+
+```csharp
+public override void Init(MyObjectBuilder_SessionComponent sessionComponent)
+{
+    Profiler.Register("My Mod Display Name", ModContext.ModId);
+}
+```
+
+`ModContext.ModId` is the Steam Workshop ID string. When the plugin is absent the call is a no-op.
 
 ### Instrument code
 
@@ -154,19 +168,7 @@ Attribute arguments are limited to compile-time constants. In practice:
 
 All four methods are **unconditional no-ops** when the plugin is absent. The only overhead is a single null check on `Profiler.Sink`. No allocation occurs on the no-op path.
 
-### Declare your mod as instrumented
 
-Call `Profiler.Register` during your mod's `Init`. This makes the mod appear in the plugin's
-config dialog so the user can select it without knowing the Steam Workshop ID.
-
-```csharp
-public override void Init(MyObjectBuilder_SessionComponent sessionComponent)
-{
-    Profiler.Register("My Mod Display Name", ModContext.ModId);
-}
-```
-
-`ModContext.ModId` is the Steam Workshop ID string. When the plugin is absent the call is a no-op.
 
 ### Conditional instrumentation in update loops
 
@@ -249,7 +251,7 @@ The tool strips:
 - `using (Profiler.Scope(...)) { ... }` wrappers (keeps inner body)
 - `using var _ = Profiler.Scope(...);` statements
 
-Yes, you can include the stripper in a .NET build/publish pipeline. For example, in a mod `.csproj` you can invoke it before your release publish target:
+You can include the stripper in a .NET build/publish pipeline. For example, in a mod `.csproj` you can invoke it before your release publish target:
 
 ```xml
 <Target Name="StripProfilerInstrumentationForRelease" BeforeTargets="Publish" Condition="'$(Configuration)' == 'Release'">

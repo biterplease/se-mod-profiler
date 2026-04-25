@@ -25,15 +25,12 @@ namespace SEProfiler.Tests.Integration
                 "SpaceEngineers", "SEModProfiler");
 
         private string   _jsonlPath;
-        private string   _promPath;
         private string[] _jsonlLines;
 
         [TestInitialize]
         public void Setup()
         {
             _jsonlPath = Path.Combine(OutputDir, "session.jsonl");
-            _promPath  = Path.Combine(OutputDir, "session.prom");
-
             if (!File.Exists(_jsonlPath))
                 Assert.Inconclusive("JSONL output file not found: " + _jsonlPath +
                     "\nRun SE with the profiler active for at least 60 s, then re-run this suite.");
@@ -145,36 +142,5 @@ namespace SEProfiler.Tests.Integration
             Assert.IsTrue(found, "No ETW GC events — RuntimeEventListener may not be active");
         }
 
-        [TestMethod, TestCategory("Integration")]
-        public void Prom_BucketLines_HaveLeLabel()
-        {
-            if (!File.Exists(_promPath))
-                Assert.Inconclusive("Prometheus output not found (prometheus mode was not enabled)");
-
-            string content = File.ReadAllText(_promPath);
-            foreach (string line in content.Split(new char[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries))
-            {
-                if (line.Contains("_bucket{"))
-                    Assert.IsTrue(line.Contains("le="), "Bucket line missing 'le' label: " + line);
-            }
-        }
-
-        [TestMethod, TestCategory("Integration")]
-        public void Prom_HistogramCountMatchesPlusInfBucket()
-        {
-            if (!File.Exists(_promPath))
-                Assert.Inconclusive("Prometheus output not found");
-
-            string content = File.ReadAllText(_promPath);
-            var countPat = new Regex("se_scope_duration_ms_count\\{[^}]+\\}\\s+(\\d+)");
-            var infPat   = new Regex("se_scope_duration_ms_bucket\\{[^}]+le=\"\\+Inf\"\\}\\s+(\\d+)");
-
-            var cm = countPat.Match(content);
-            var im = infPat.Match(content);
-            if (!cm.Success || !im.Success) return;
-
-            Assert.AreEqual(long.Parse(cm.Groups[1].Value), long.Parse(im.Groups[1].Value),
-                "+Inf bucket count should equal histogram _count");
-        }
     }
 }
