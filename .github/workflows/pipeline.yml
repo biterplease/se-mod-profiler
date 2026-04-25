@@ -16,7 +16,7 @@ on:
 jobs:
   # --- CI STAGE ---
   build:
-    if: github.event_name == 'pull_request' || github.ref_type == 'tag'
+    if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main' || github.ref_type == 'tag'
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
