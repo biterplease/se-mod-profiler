@@ -121,21 +121,16 @@ jobs:
         shell: bash
         run: dotnet nuget push nupkg/*.nupkg --api-key "$NUGET_API_KEY" --source https://api.nuget.org/v3/index.json --skip-duplicate
 
-      - name: Update SEProfiler.xml Lib version
+      - name: Update SEProfiler.xml Lib version and Commit
         shell: pwsh
         run: |
-          $ver = "${{ steps.version.outputs.VERSION }}"
-          $xml = Get-Content SEProfiler.xml -Raw
-          $xml = $xml -replace '(<PackageReference Include="SEProfiler\.Lib" Version=")[^"]*(")', "`${1}${ver}`$2"
-          Set-Content SEProfiler.xml $xml -NoNewline
-          Write-Host "SEProfiler.xml now references SEProfiler.Lib $ver"
-          Get-Content SEProfiler.xml
+          ./ops/scripts/Update-Xml.ps1 -Version "${{ steps.version.outputs.VERSION }}" -CommitSha "${{ github.sha }}"
 
       - name: Commit and push SEProfiler.xml
         shell: bash
         run: |
           git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add SEProfiler.xml
-          git diff --staged --quiet || git commit -m "chore: bump SEProfiler.Lib to ${{ steps.version.outputs.TAG }} [skip ci]"
+          git diff --staged --quiet || git commit -m "chore: update SEProfiler.xml (version ${{ steps.version.outputs.TAG }} / sha $sha) [skip ci]
           git push origin HEAD:main
