@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<TargetFramework>net48</TargetFramework>
+		<RootNamespace>SEProfiler</RootNamespace>
+		<LangVersion>6</LangVersion>
+		<GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+		<Configurations>Release;Debug</Configurations>
+		<Platforms>x64</Platforms>
+		<PlatformTarget>x64</PlatformTarget>
+
+		<PackageId>SEProfiler.Lib</PackageId>
+		<Authors>biterplease</Authors>
+		<Description>Zero-dependency instrumentation library for Space Engineers mods. Scope, Counter, Gauge, and Event calls are unconditional no-ops when SEProfiler.Plugin is absent — no allocation on the no-op path.</Description>
+		<PackageTags>space-engineers;profiling;instrumentation;mod</PackageTags>
+		<RepositoryUrl>https://github.com/biterplease/se-mod-profiler</RepositoryUrl>
+		<PackageLicenseExpression>MIT</PackageLicenseExpression>
+		<GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+		<IncludeSymbols>true</IncludeSymbols>
+		<SymbolPackageFormat>snupkg</SymbolPackageFormat>
+		<PackageReadmeFile>README.md</PackageReadmeFile>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<None Include="..\README.md" Pack="true" PackagePath="\" />
+	</ItemGroup>
+</Project>

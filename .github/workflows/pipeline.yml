@@ -6,6 +6,12 @@ on:
     tags: [ "v*" ]
   pull_request:
     branches: [ "main" ]
+  workflow_dispatch:
+    inputs:
+      confirm_upload:
+        description: 'Type "yes" to publish SEProfiler.Lib to NuGet and update SEProfiler.xml'
+        required: true
+        default: 'no'
 
 jobs:
   # --- CI STAGE (Runs on PRs and Tags) ---
@@ -14,28 +20,26 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Setup MSBuild
-        uses: microsoft/setup-msbuild@v2
-      
-      - name: Build Packages
-        run: # [Empty Script]
-        
-      - name: Cache Build Artifacts
-        uses: actions/upload-artifact@v4
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
         with:
-          name: build-output
-          path: bin/ # Adjust path as needed
+          dotnet-version: '8.x'
+      - name: Build SEProfiler.Lib
+        run: dotnet build SEProfiler.Lib/SEProfiler.Lib.csproj -c Release
+      - name: Build SEProfiler.Lib.Tests
+        run: dotnet build SEProfiler.Lib.Tests/SEProfiler.Lib.Tests.csproj -c Release
 
   test:
     needs: build
     runs-on: windows-latest
     steps:
-      - name: Download Artifacts
-        uses: actions/download-artifact@v4
+      - uses: actions/checkout@v4
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
         with:
-          name: build-output
-      - name: Run Unit Tests
-        run: # [Empty Script]
+          dotnet-version: '8.x'
+      - name: Run Lib Tests
+        run: dotnet test SEProfiler.Lib.Tests/SEProfiler.Lib.Tests.csproj -c Release --logger "trx;LogFileName=results.trx"
 
   # --- CD STAGE (Runs on Main after Merge) ---
   tagging:
@@ -51,21 +55,87 @@ jobs:
         uses: mathieudutour/github-tag-action@v6.2
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          # This tool looks at commit messages (fix:, feat:, etc) to determine semver
+          # Reads conventional commit messages (fix:, feat:, etc.) to bump semver
 
   package_and_upload:
-    # This job only runs when you manually trigger it via the Actions tab
     if: github.event_name == 'workflow_dispatch' && github.event.inputs.confirm_upload == 'yes'
     runs-on: windows-latest
+    permissions:
+      contents: write
     env:
       NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
     steps:
       - uses: actions/checkout@v4
-      - name: Download Artifacts
-        uses: actions/download-artifact@v4
         with:
-          name: package-artifact
-      - name: Prepare & Validate
-        run: # [Empty Script]
+          ref: main
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.x'
+
+      - name: Get version from latest tag
+        id: version
+        shell: pwsh
+        run: |
+          $tag = git describe --tags --abbrev=0
+          $ver = $tag.TrimStart('v')
+          "TAG=$tag"     | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          "VERSION=$ver" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          Write-Host "tag=$tag  version=$ver"
+
+      - name: Build SEProfiler.Lib
+        run: dotnet build SEProfiler.Lib/SEProfiler.Lib.csproj -c Release -p:Version=${{ steps.version.outputs.VERSION }}
+
+      - name: Pack SEProfiler.Lib
+        run: dotnet pack SEProfiler.Lib/SEProfiler.Lib.csproj -c Release -p:Version=${{ steps.version.outputs.VERSION }} --no-build --output nupkg/
+
+      - name: Validate package contents
+        shell: pwsh
+        run: |
+          $pkg = Get-ChildItem nupkg -Filter *.nupkg | Select-Object -First 1
+          Write-Host "=== Package: $($pkg.Name) ==="
+
+          $out = "nupkg\extracted"
+          Expand-Archive -Path $pkg.FullName -DestinationPath $out -Force
+
+          Write-Host "`n=== .nuspec ==="
+          Get-Content (Get-ChildItem $out -Filter *.nuspec | Select-Object -First 1).FullName
+
+          Write-Host "`n=== Files in package ==="
+          Get-ChildItem $out -Recurse -File |
+              ForEach-Object { $_.FullName.Substring((Resolve-Path $out).Path.Length + 1) }
+
+          Write-Host "`n=== SEProfiler.Lib.dll referenced assemblies ==="
+          $dll = Get-ChildItem $out -Recurse -Filter SEProfiler.Lib.dll | Select-Object -First 1
+          if ($dll) {
+              [System.Reflection.Assembly]::LoadFrom($dll.FullName).GetReferencedAssemblies() |
+                  ForEach-Object { "  $($_.Name) $($_.Version)" }
+          } else {
+              Write-Host "  (dll not found in package)"
+          }
+
       - name: Upload to NuGet
-        run: # [Empty Script]
+        shell: bash
+        run: dotnet nuget push nupkg/*.nupkg --api-key "$NUGET_API_KEY" --source https://api.nuget.org/v3/index.json --skip-duplicate
+
+      - name: Update SEProfiler.xml Lib version
+        shell: pwsh
+        run: |
+          $ver = "${{ steps.version.outputs.VERSION }}"
+          $xml = Get-Content SEProfiler.xml -Raw
+          $xml = $xml -replace '(<PackageReference Include="SEProfiler\.Lib" Version=")[^"]*(")', "`${1}${ver}`$2"
+          Set-Content SEProfiler.xml $xml -NoNewline
+          Write-Host "SEProfiler.xml now references SEProfiler.Lib $ver"
+          Get-Content SEProfiler.xml
+
+      - name: Commit and push SEProfiler.xml
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add SEProfiler.xml
+          git diff --staged --quiet || git commit -m "chore: bump SEProfiler.Lib to ${{ steps.version.outputs.TAG }} [skip ci]"
+          git push origin HEAD:main
